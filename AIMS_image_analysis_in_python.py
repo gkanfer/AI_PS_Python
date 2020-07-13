@@ -10,7 +10,7 @@ import tifffile as tfi
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 #from PIL import fromarray
 from numpy import asarray
 from skimage import data,io
@@ -37,8 +37,12 @@ os.chdir('F:\Gil\AIMS\AIPS_code_in_python\example_image')
 #I = io.imread('wella1A1_0004.tif',as_gray=True)
 #I.show()
 
+%matplotlib inline
+ 
 
-        
+from IPython import get_ipython
+get_ipython().run_line_magic('matplotlib', 'inline')
+       
 
 pixels = tfi.imread('Composite.tif10.tif')
 
@@ -54,7 +58,6 @@ print('Min: %.3f, Max: %.3f' % (pixels.min(), pixels.max()))
 
 dapi=pixels[0,:,:]
 plt.imshow(dapi)
-#plt.show()
 GFP=pixels[1,:,:]
 plt.imshow(GFP)
 
@@ -81,11 +84,39 @@ sizes = np.bincount(label_objects.ravel())
 mask_sizes = sizes > 250   #all the values larger than 250 is True
 mask_sizes[0] = 0 #column 0, False will get the value of zero  
 gsegg = mask_sizes[label_objects]
+gsegg, nb_labels = label(gsegg) 
 plt.imshow(gsegg)
 
 
-
-
-
+###GFP extraction
+Cyto = pixels[1,:,:]*40
+#plt.hist(Cyto,"auto")
+plt.imshow(Cyto,cmap='gray_r',  vmin=,  vmax=...)
+block_size=51
+inten=40
+CH1_mask = threshold_local(Cyto, block_size,offset=0.1)
+Ch1_mask_0 = Cyto > CH1_mask
+plt.imshow(Ch1_mask_0,cmap='gray_r')
+Ch1_mask_1 = binary_opening(Ch1_mask_0, structure=np.ones((3,3))).astype(np.float64) #should be a binarry image
+plt.imshow(Ch1_mask_1,cmap='gray_r')  
+#plt.hist(Ch1_mask_1,"auto")
+quntile_num = np.quantile(Cyto, .1)
+#open_2[] = Cyto > quntile_num
+#Ch1_mask_2 = binary_opening(open_2 > 0.4)
+Ch1_mask_2 = np.where( Cyto > quntile_num ,1,0) #should be bolian
+plt.imshow(Ch1_mask_2,cmap='gray')
+combine=Ch1_mask_1
+combine[Ch1_mask_2 > Ch1_mask_1] = Ch1_mask_2[Ch1_mask_2 > Ch1_mask_1]
+combine[gsegg > combine] = gsegg[gsegg > combine]
+plt.imshow(combine,cmap='gray_r')
+plt.show()
+seg = watershed(Cyto, gsegg, mask=Ch1_mask_2, compactness=1)
+seg = binary_fill_holes(seg)
+plt.imshow(seg)
+seg = watershed(seg, gsegg, mask=Ch1_mask_2, compactness=1)
+seg1 = binary_fill_holes(seg)
+seg2 , nb_labels = label(seg1)
+plt.imshow(seg2)
+plt.hist(seg,"auto")
 
 
